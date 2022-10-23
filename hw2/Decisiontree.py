@@ -117,92 +117,119 @@ class DecisionTreeClassifier:
         # predict the label of data
         for x in X:
             y = self._tree_traverse(x, self.root)
-            pred.append(y))
+            pred.append(y)
         return pred
 
     def _tree_traverse(self, x, root):
         if (root.left is None):
             return root.predicted_class
-        feature_val=x[root.feature_index]
+        feature_val = x[root.feature_index]
         if (feature_val == root.threshold):
             return self._tree_traverse(x, root.left)
         else:
             return self._tree_traverse(x, root.right)
 
     def _find_leaves(self, root):
-        # TODO
         # find each node child leaves number
-        pass
+        if (root.left is None):
+            return 1
+        else:
+            return self._find_leaves(root.left) + self._find_leaves(root.right)
 
     def _error_before_cut(self, root):
-        # TODO
         # return error before post-pruning
-        pass
+        if (root.left is None):
+            return root.num_errors
+        else:
+            return self._error_before_cut(root.left) + self._error_before_cut(root.right)
 
     def _compute_alpha(self, root):
-        # TODO
         # Compute each node alpha
         # alpha = (error after cut - error before cut) / (leaves been cut - 1)
-        pass
+        if (root.left is not None and root.right is not None):
+            root.alpha = (
+                root.num_errors - self._error_before_cut(root)) / (self._find_leaves(root) - 1)
+            self._compute_alpha(root.left)
+            self._compute_alpha(root.right)
+        else:
+            root.alpha = float("inf")
+        # print(root.alpha)
 
     def _find_min_alpha(self, root):
-        MinAlpha=float("inf")
-        # TODO
+        MinAlpha = float("inf")
         # Search the Decision tree which have minimum alpha's node
-        pass
+        queue = []
+        queue.append(root)
+        ret = None
+
+        while (len(queue) != 0):
+            curr_node = queue.pop(0)
+            if (curr_node.left is not None):
+                queue.append(curr_node.left)
+                queue.append(curr_node.right)
+            if (curr_node.alpha < MinAlpha):
+                MinAlpha = curr_node.alpha
+                ret = curr_node
+
+        return ret
 
     def _prune(self):
-        # TODO
         # prune the decision tree with minimum alpha node
-        pass
+        self._compute_alpha(self.root)
+        cut_node = self._find_min_alpha(self.root)
+        cut_node.left = None
+        cut_node.right = None
 
 
-def load_train_test_data(test_ratio = .3, random_state = 1):
-    df=pd.read_csv('./car.data', names = ['buying', 'maint',
-                     'doors', 'persons', 'lug_boot', 'safety', 'target'])
-    X=df.drop(columns = ['target'])
-    X=np.array(X.values)
-    y=np.array(df['target'].values)
-    label=np.unique(y)
+def load_train_test_data(test_ratio=.3, random_state=1):
+    df = pd.read_csv('./car.data', names=['buying', 'maint',
+                                          'doors', 'persons', 'lug_boot', 'safety', 'target'])
+    X = df.drop(columns=['target'])
+    X = np.array(X.values)
+    y = np.array(df['target'].values)
+    label = np.unique(y)
     # label encoding
     for i in range(len(y)):
         for j in range(len(label)):
             if y[i] == label[j]:
-                y[i]=j
+                y[i] = j
                 break
-    y=y.astype('int')
-    X_train, X_test, y_train, y_test=train_test_split(
-        X, y, test_size = test_ratio, random_state = random_state, stratify = y)
+    y = y.astype('int')
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_ratio, random_state=random_state, stratify=y)
     return X_train, X_test, y_train, y_test
 
 
-def accuracy_report(X_train_scale, y_train, X_test_scale, y_test, max_depth = 7):
-    tree=DecisionTreeClassifier(
-        max_depth = max_depth, n_classes = len(np.unique(y_train)))
+def accuracy_report(X_train_scale, y_train, X_test_scale, y_test, max_depth=7):
+    tree = DecisionTreeClassifier(
+        max_depth=max_depth, n_classes=len(np.unique(y_train)))
     tree.fit(X_train_scale, y_train)
-    pred=tree.predict(X_train_scale)
+    pred = tree.predict(X_train_scale)
+
+    # print("tree train leaves: " + str(tree._find_leaves(tree.root)))
 
     print(" tree train accuracy: %f"
           % (sklearn.metrics.accuracy_score(y_train, pred)))
-    pred=tree.predict(X_test_scale)
+    pred = tree.predict(X_test_scale)
     print(" tree test accuracy: %f"
           % (sklearn.metrics.accuracy_score(y_test, pred)))
-
     for i in range(10):
         print("=============Cut=============")
         tree._prune()
-        pred=tree.predict(X_train_scale)
+        pred = tree.predict(X_train_scale)
+        # print("tree train leaves: " + str(tree._find_leaves(tree.root)))
         print(" tree train accuracy: %f"
               % (sklearn.metrics.accuracy_score(y_train, pred)))
-        pred=tree.predict(X_test_scale)
+        pred = tree.predict(X_test_scale)
         print(" tree test accuracy: %f"
               % (sklearn.metrics.accuracy_score(y_test, pred)))
 
 
 def main():
-    X_train, X_test, y_train, y_test=load_train_test_data(
-        test_ratio = .3, random_state = 1)
-    accuracy_report(X_train, y_train, X_test, y_test, max_depth = 4)
+    X_train, X_test, y_train, y_test = load_train_test_data(
+        test_ratio=.3, random_state=1)
+
+    accuracy_report(X_train, y_train, X_test, y_test, max_depth=4)
 
 
 if __name__ == "__main__":
