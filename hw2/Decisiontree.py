@@ -46,6 +46,10 @@ class DecisionTreeClassifier:
         if m <= 1:
             return None, None
 
+        class_y = np.unique(y)
+        if len(class_y) <= 1:
+            return None, None
+
         # Entropy of current node.
 
         entropy_current = self._entropy(y)
@@ -146,14 +150,13 @@ class DecisionTreeClassifier:
     def _compute_alpha(self, root):
         # Compute each node alpha
         # alpha = (error after cut - error before cut) / (leaves been cut - 1)
-        if (root.left is not None and root.right is not None):
+        if (root.left is not None):
             root.alpha = (
                 root.num_errors - self._error_before_cut(root)) / (self._find_leaves(root) - 1)
             self._compute_alpha(root.left)
             self._compute_alpha(root.right)
         else:
             root.alpha = float("inf")
-        # print(root.alpha)
 
     def _find_min_alpha(self, root):
         MinAlpha = float("inf")
@@ -167,7 +170,7 @@ class DecisionTreeClassifier:
             if (curr_node.left is not None):
                 queue.append(curr_node.left)
                 queue.append(curr_node.right)
-            if (curr_node.alpha < MinAlpha):
+            if (curr_node.alpha <= MinAlpha):
                 MinAlpha = curr_node.alpha
                 ret = curr_node
 
@@ -229,7 +232,7 @@ def main():
     X_train, X_test, y_train, y_test = load_train_test_data(
         test_ratio=.3, random_state=1)
 
-    accuracy_report(X_train, y_train, X_test, y_test, max_depth=4)
+    accuracy_report(X_train, y_train, X_test, y_test, max_depth=8)
 
 
 if __name__ == "__main__":
